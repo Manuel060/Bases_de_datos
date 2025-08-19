@@ -1,0 +1,177 @@
+---
+title: "Taller1"
+author: "Victor Julio Pe{a"
+date: "2025-07-26"
+output: word_document
+---
+
+# Actividades
+
+##  Análisis exploratorio de la base de datos
+
+### a. Cargar la base de datos denominada *base_concesionario*.  
+```{r, warning=FALSE}
+library(readxl)
+library(dplyr)
+concesionario <-  read_excel("C:/Users/HP/Downloads/base_concesionario.xlsx")
+concesionario <- concesionario[-c(1,2),] #se vizualizo la base y hay dos filas sin registros por lo tanto se eliminan
+head(concesionario, 4)
+```
+
+
+### b. Realizar una exploración de la base de tal manera que se pueda definir cuántos clientes están registrados, qué variables están asociadas a los clientes.
+```{r}
+dim(concesionario)        # Filas y columnas (cuántos clientes y variables)
+str(concesionario)        # Estructura de los datos
+
+```
+
+
+### c. Identificar y contar los datos faltantes que se tengan en la base de datos.
+```{r}
+concesionario[concesionario == "NA"] <- NA
+colSums(is.na(concesionario))
+
+```
+
+### d. Utilizar y aplicar estrategias que permitan identificar registros incompletos, valores inconsistentes y otras características que podrían afectar el análisis de los datos de la base.
+
+
+```{r}
+#valores inconsistentes
+unique(concesionario$SEXO)
+```
+```{r}
+# Convertir todo a minúsculas 
+concesionario$SEXO <- tolower(concesionario$SEXO)
+
+# Normalizar valores comunes
+concesionario$SEXO[concesionario$SEXO %in% c("m", "masculino", "h", "hombre", "male")] <- "M"
+concesionario$SEXO[concesionario$SEXO %in% c("f", "femenino", "fem", "mujer", "female")] <- "F"
+
+# Verificar que solo queden las dos categorías
+unique(concesionario$SEXO)
+
+```
+
+# 2. Análisis de la variable “marca de auto”
+
+
+### a. Evaluar la variable “Marca de auto” y determinar si hay datos faltantes, en caso de que los haya, se requiere proponer una metodología que permita tratar con este tipo de datos.
+```{r}
+# Revisar datos faltantes en la variable
+sum(is.na(concesionario$`MARCA DE AUTO`))
+```
+```{r}
+# eliminar filas con na
+base_limpia <- concesionario %>% filter(!is.na(`MARCA DE AUTO`))
+```
+Se elimanron las filas con datos NA en la variable marca de auto
+
+
+### b. Crear una tabla de frecuencias que permita determinar la preferencia en marcas de autos de los clientes.
+```{r}
+frecuencia <- table(base_limpia$`MARCA DE AUTO`)
+porcentajes <- round(prop.table(frecuencia)*100, 2)
+tabla <- cbind(Frecuencia = frecuencia, Porcentaje = porcentajes)
+print(tabla)
+```
+
+### c. Haciendo uso de la librería ggplot2 de R, generar un gráfico de barras y de sectores que permita visualizar la distribución de las marcas de autos entre los clientes
+```{r}
+library(ggplot2)
+
+freq_table <- base_limpia %>%
+  count(`MARCA DE AUTO`)
+
+ggplot(freq_table, aes(x = `MARCA DE AUTO`, y = n)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  geom_text(aes(label = n), vjust = -0.5) +  # Ajusta para que el texto quede encima
+  theme_minimal() +
+  labs(title = "Distribución de marcas de autos",
+       x = "Marca",
+       y = "Cantidad")
+
+# Gráfico de sectores (pastel)
+base_limpia %>% 
+  count(`MARCA DE AUTO`) %>%
+  ggplot(aes(x = "", y = n, fill = `MARCA DE AUTO`)) +
+  geom_col(width = 1) +
+  coord_polar(theta = "y") +
+  theme_void() +
+  labs(title = "Proporción de marcas de autos")
+```
+
+
+### d. Proporcionar una conclusión a partir de la información que se haya extraído en el desarrollo de los numerales anteriores.
+
+El análisis de la variable "Marca de auto" reveló una distribución clara en las preferencias de los clientes del concesionario. hay una marca (AUDI) con 13, que predomina preo no por mucho, ya que hay 4 marcas mas que estan por debajo de este no por mucho los cuales son (CHEVROLET Y RENAULT) con 12 y (BMW) con 11.
+
+# 2. Análisis de la variable Edad
+
+### a. Verificar que la variable Edad sea numérica
+```{r}
+if (!is.numeric(base_limpia$EDAD)) {
+  base_limpia$EDAD <- as.numeric(as.character(base_limpia$EDAD))
+}
+
+class(base_limpia$EDAD)
+```
+
+### b. Identificar anomalías y corregirlas
+```{r}
+summary(base_limpia$EDAD)
+
+# Detectar edades negativas o poco probables (>100 años) (<15 años)
+anomalías <- base_limpia$EDAD[base_limpia$EDAD < 15 | base_limpia$EDAD > 90]
+print(anomalías)
+```
+hay una persona menor a 10 años
+
+```{r}
+# eliminar filas con na
+base_limpia <- base_limpia %>% filter(!is.na(`EDAD`))
+# Eliminar filas con Edad menor a 15 años
+base_limpia <- base_limpia[base_limpia$EDAD >= 15 | is.na(base_limpia$EDAD), ]
+```
+se eliminan filas con NA en la variable edad y la persona menor a 15 años
+
+
+### c. Haciendo uso de la librería ggplot2 de R, realizar un histogramas de la variable edad y describir características de distribución de la variable.
+```{r}
+library(ggplot2)
+
+ggplot(base_limpia, aes(x = EDAD)) +
+  geom_histogram(binwidth = 5, fill = "steelblue", color = "black") +
+  theme_minimal() +
+  labs(title = "Histograma de la Edad de los Clientes",
+       x = "Edad (años)",
+       y = "Frecuencia")
+```
+
+
+#  Análisis de la variable sexo
+
+### a. Revisar la consistencia de la variable “SEXO” y realizar correcciones en caso de encontrar valores inusuales o inconsistentes.
+```{r}
+# Ver valores únicos actuales
+unique(base_limpia$SEXO)
+```
+Anteriormente se hizo una limpieza, por lo tanto no hay valores inconsistentes
+
+```{r}
+base_limpia <- base_limpia[!is.na(base_limpia$SEXO), ]
+```
+se eliminan datos con NA
+
+
+### b. Crear una tabla de frecuencias y extraer conclusiones sobre la proporción de hombres y de mujeres en el conjunto de clientes.
+```{r}
+library(dplyr)
+base_limpia %>%
+  filter(!is.na(SEXO)) %>%
+  count(SEXO) %>%
+  mutate(porcentaje = n / sum(n) * 100)
+```
+Tras limpiar la variable SEXO, se encontró que la proporción de hombres y mujeres en la base es aproximadamente 52.8% hombres y 47.2% mujeres. La variable está bien definida y puede usarse para análisis posteriores de segmentación o comportamiento según género.
+
